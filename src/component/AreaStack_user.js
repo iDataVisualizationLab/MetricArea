@@ -56,7 +56,10 @@ const timeoptions = {'Day':{unit:'Day',step:1},'Hour':{unit:'Hour',step:1},'30 M
 // stack.keys(stackColor);
 const AreaStack = function ({time_stamp, metricRangeMinMax,onLoad, color, config, selectedTime,metrics, selectedComputeMap, setSelectedComputeMap, selectedUser, dimensions, selectedSer,selectedSer2, scheme, colorByName, colorCluster, colorBy, getMetric, objects, theme, line3D, layout, users, selectService, getKey}) {
     const [_data,set_Data] = useState([]);
+    const [dataF,setdataF] = useState([]);
     const [data,setdata] = useState([]);
+    const [before,setBefore] = useState([]);
+    const [after,setAfter] = useState([]);
     const [timeIndex,setTimeIndex] = useState([]);
     const [isPending,startTransition] = useTransition();
     const [holderref,bounds] = useMeasure();
@@ -137,6 +140,7 @@ const AreaStack = function ({time_stamp, metricRangeMinMax,onLoad, color, config
         });
     }
     const singleTimeLine = (_timeIndex=timeIndex,v, k, type, scale = 1,maxLength) => {
+        console.log(_timeIndex=timeIndex,v, k, type, scale = 1,maxLength)
         const item = {key: k, max: 0, type, data: v, height: height * scale + margin.top + margin.bottom};
         item.values = _timeIndex.map((t, ti) => {
             const offset = (!ti) ? (maxLength - t[1].length) : 0;
@@ -263,6 +267,7 @@ const AreaStack = function ({time_stamp, metricRangeMinMax,onLoad, color, config
                 const data = [..._data.slice(0,focus.index+1),...focus.sub,...tail];
                 let offset=0;
                 data.forEach(d=>{
+                    d.py = offset;
                     d._y = offset;
                     d.y = offset;
                     offset+=d.height;
@@ -270,17 +275,22 @@ const AreaStack = function ({time_stamp, metricRangeMinMax,onLoad, color, config
                 focus.sub.forEach(d=>d.py=focus.y)
                 data.height = offset;
                 // data.height =
-                setdata(data);
+                setdataF(data);
+                onScroll(undefined,data);
+                // setdata(data);
                 return;
             }else {
                 let offset = 0;
                 _data.forEach(d=>{
+                    d.py = offset;
                     d._y = offset;
                     d.y = offset;
                     offset+=d.height;
                 });
                 _data.height = offset;
-                setdata(_data);
+                setdataF(_data);
+                onScroll(undefined,_data);
+                // setdata(_data);
                 return ;
             }
         })
@@ -363,7 +373,7 @@ const AreaStack = function ({time_stamp, metricRangeMinMax,onLoad, color, config
                 highlights[main.key] = true;
             const list = colorScale.stackColor.map(k=>[k,current[k]]).reverse().filter(d=>d[1]);
             const sharedu = Object.keys(highlights).length-1;
-            console.log(highlights)
+
             setHover({key,timeIndex,position,mouse:d3.pointer(event,document.body),value:current.max,data:current,parent:main,
                 highlights,
                 links,
@@ -390,27 +400,110 @@ const AreaStack = function ({time_stamp, metricRangeMinMax,onLoad, color, config
         }else{
             setHover();
         }
-        let offset=0;
-        data.forEach(d=>{
-            d.y = offset;
-            offset+=d.height;
-        });
+        // let offset=0;
+        // data.forEach(d=>{
+        //     d.y = offset;
+        //     offset+=d.height;
+        // });
         setdata(data)
     },[data,scheme.computers,colorScale]);
+    const onScroll = (event,__data=dataF)=>{
+        let top = 0;
+        let cheight = 0;
+        if (event) {
+            let element = event.target;
+            top = element.scrollTop;
+            cheight = element.clientHeight;
+        }else{
+            let element = d3.select('#g-chart-holder');
+            if (!element.empty()){
+                element = element.node()
+                top = element.scrollTop;
+                cheight = element.clientHeight;
+            }
+        }
+        // disapear
+        // let collapData = __data.filter(d=>(d.y>=top) && (d.y<=(top+cheight)) );
+        // collapData.height = __data.height
+        // setdata(collapData)
+        // other way
+        let before = [];
+        let middle = [];
+        let after = [];
+        let collapData = [];
+        __data.forEach(d=>{
+            if (d.y<(top+height)){
+                before.push(d);
+            }else if(d.y>(top+cheight-height*1.5-30)) {
+                after.push(d);
+            }else{
+                middle.push(d);
+            }
+        });
+        if (before.length===1){
+            collapData.push(before[0]);
+            before = [];
+        }else if (before.length){
+            //handle before
+            // before = [sumup(before,top,'Up')];
+            before = [sumup(before,height/3,'Up')];
+        }
+        middle.forEach(d=>collapData.push(d));
+        if (after.length===1){
+            collapData.push(after[0])
+            after = [];
+        }else if (after.length){
+            //handle after
+            // after = [sumup(after,top+cheight-height-30,'Down')];
+            after = [sumup(after,cheight-height-30,'Down')];
+        }
+        collapData.height = __data.height
+        setdata(collapData);
+        setAfter(after);
+        setBefore(before);
+
+        function sumup(after,y,k){
+            const v = [];
+            const vo = [];
+            after.forEach((item)=>{
+                item.data.forEach((c,i)=>{
+                    if (!vo[i]) {
+                        vo[i] = {};
+                        v[i]=[];
+                    }
+                    c.forEach(d=>{
+                        if (!vo[i][d.key])
+                        {
+                            vo[i][d.key] = d;
+                            v[i].push(d);
+                        }
+                    })
+                })
+            });
+            let out = singleTimeLine(timeIndex,v,k,'ohter',1,d3.max(timeIndex, t => t[1].length));
+            out.y = y;
+            out._y = out.y ;
+            out.py = out.y ;
+            out.count = after.length;
+            console.log( out.count)
+            return (out)
+        }
+
+    }
     const totalw = data[0]?((outerWidth)*data[0].values.length +marginGroup.left+marginGroup.right):200;
     return <div style={{width:'100%',height:'100%',overflow:'hidden'}}>
         <div style={{position:'relative',width:(selectedSer2!==undefined)?'50%':'100%',height:'100%', pointerEvents:'all'}}>
-            {data[0]&&<div style={{width:'100%',height:'88%',position:'relative'}} id="g-chart" spacing={2}>
-                <div ref={holderref} style={{width:'100%',height:'100%', overflow:'auto'}}>
+            <div style={{width:'100%',height:'88%',position:'relative'}} id="g-chart" spacing={2}>
+                <div ref={holderref} style={{width:'100%',height:'100%', overflow:'auto'}} id="g-chart-holder" onScroll={onScroll}>
                     <svg width={totalw} height={data.height+marginGroup.top+marginGroup.bottom} style={{overflow:'visible',marginTop:10}}>
                         <g transform={`translate(${marginGroup.left},${marginGroup.top})`}>
                             <AnimatePresence>
+
                             {data.map((main,i)=><motion.g key={main.key}
-                                                          initial={{y: main.py??0}}
-                                                          animate={{ y: main.y }}
-                                                          exit={{y: main.py??0}}
-                                                          transition={{ type: "spring", stiffness: 30 }}
-                                                          style={{ opacity: ((!hover) || hover.highlights[main.key])?1:0.1}}>
+                                                          initial={{y: main.py??0,opacity:0}}
+                                                          animate={{ y: main.y,opacity:((!hover) || hover.highlights[main.key])?1:0.1 }}
+                                                          exit={{y: main.py??0,opacity:0}}
+                                                          transition={{ type: "spring", stiffness: 30 }}>
                                 <g transform={`translate(0,${main.height-outerHeight})`}>
 
                                     {main.values.map((d,ti)=>
@@ -423,25 +516,13 @@ const AreaStack = function ({time_stamp, metricRangeMinMax,onLoad, color, config
                                             />
                                         </g>
                                     </g>)}
-                                    {/*{main.values.map((d,ti)=><g key={ti} transform={`translate(${(outerWidth*ti)},0)`} >*/}
-                                        {/*<g transform={`translate(${margin.left},${margin.top})`}>*/}
-
-                                            {/*<rect width={width} y={-main.height+outerHeight} height={main.height-margin.top-margin.bottom} className={'overlay'}*/}
-                                                  {/*onMouseMove={event=>onMouseOverlay(event,main.key,ti,d)}/>*/}
-                                            {/*/!*{(hover&&(hover.key===main.key))&&<line x2={width} y1={hover.position[1]} y2={hover.position[1]} stroke={'black'} strokeDasharray={'2 1'}/>}*!/*/}
-                                            {/*/!*{(hover&&(hover.key===main.key)&&(hover.timeIndex===ti))?<><g transform={`translate(${hover.position[0]},0)`}>*!/*/}
-                                                {/*/!*<line y2={hover.position[1]} y1={y(0)} stroke={'black'} strokeDasharray={'2 1'}/>*!/*/}
-                                            {/*/!*</g>*!/*/}
-                                                {/*/!*<text y={main.height-margin.top-margin.bottom+4} dy=".65em" className={'year decade'}>{multiFormat(hover.data.time)}</text>*!/*/}
-                                            {/*/!*</>: ''}*!/*/}
-                                        {/*</g>*/}
-                                    {/*</g>)}*/}
                                 </g>
                                 <text className={'title'} dy={main.height/2} x={main.type==='User'?0:40}
                                       onClick={()=>(main.type==='User')?(focus&&(focus.key===main.key)?setfocus(undefined):setfocus(main)):null}
                                 >{main.type==='User'?(focus===main?'(-)':'(+)'):''} {main.type}: {main.key} , Max #computes: {main.max}{main.data.jobs?`, #jobs: ${Object.keys(main.data.jobs).length}`:''}</text>
 
                             </motion.g>)}
+
                             </AnimatePresence>
                             {hover&&<><line x2={'100%'} y1={hover.position[1]+hover.parent.y} y2={hover.position[1]+hover.parent.y} stroke={'black'} strokeDasharray={'2 1'}/>}
                                 <g transform={`translate(${(outerWidth*hover.timeIndex + margin.left)},${margin.top})`} style={{pointerEvents:'none'}}>
@@ -457,15 +538,61 @@ const AreaStack = function ({time_stamp, metricRangeMinMax,onLoad, color, config
                         </g>
                     </svg>
                 </div>
-                <svg width={(outerWidth)*data[0].values.length +marginGroup.left+marginGroup.right} height={30} style={{position:'absolute',bottom:0,left:0}}>
+                <svg width={totalw} height={'100%'} style={{overflow:'visible',top:0, position:'absolute',pointerEvents:'none'}}>
                     <g transform={`translate(${marginGroup.left},${marginGroup.top})`}>
-                        {data[0]&&data[0].values.map((d,ti)=><g key={ti} transform={`translate(${(outerWidth*ti)},0)`} >
+                        {before.map((main,i)=><g key={main.key}
+                                                 className={'notransition'}
+                                                 transform={`translate(0,${main.y})`}>
+                            <g transform={`translate(0,${main.height-outerHeight})`}>
+
+                                {main.values.map((d,ti)=>
+                                    <g key={ti} transform={`translate(${(outerWidth*ti)},0)`} >
+                                        <g transform={`translate(${margin.left},${margin.top})`}>
+                                            {d.stack.map(p=><path key={p.key} d={area(p)} fill={p.key} style={{transition:"2s"}}/>)}
+                                            <rect width={width} y={-main.height+outerHeight} height={main.height-margin.top-margin.bottom} className={'overlay'}
+                                                // onMouseMove={event=>onMouseOverlay(event,ti,d,main)}
+                                                // onMouseOut={event=>onMouseLeave(event)}
+                                            />
+                                        </g>
+                                    </g>)}
+                            </g>
+                            <text className={'title'} dy={main.height/2} x={main.type==='User'?0:40}
+                                  onClick={()=>(main.type==='User')?(focus&&(focus.key===main.key)?setfocus(undefined):setfocus(main)):null}
+                            >{main.count} More on the Top , Max #computes: {main.max}{main.data.jobs?`, #jobs: ${Object.keys(main.data.jobs).length}`:''}</text>
+
+                        </g>)}
+                        {after.map((main,i)=><g key={main.key}
+                                                className={'notransition'}
+                                                transform={`translate(0,${main.y})`}>
+                            <g transform={`translate(0,${main.height-outerHeight})`}>
+
+                                {main.values.map((d,ti)=>
+                                    <g key={ti} transform={`translate(${(outerWidth*ti)},0)`} >
+                                        <g transform={`translate(${margin.left},${margin.top})`}>
+                                            {d.stack.map(p=><path key={p.key} d={area(p)} fill={p.key} style={{transition:"2s"}}/>)}
+                                            <rect width={width} y={-main.height+outerHeight} height={main.height-margin.top-margin.bottom} className={'overlay'}
+                                                // onMouseMove={event=>onMouseOverlay(event,ti,d,main)}
+                                                // onMouseOut={event=>onMouseLeave(event)}
+                                            />
+                                        </g>
+                                    </g>)}
+                            </g>
+                            <text className={'title'} dy={main.height/2} x={main.type==='User'?0:40}
+                                  onClick={()=>(main.type==='User')?(focus&&(focus.key===main.key)?setfocus(undefined):setfocus(main)):null}
+                            >{main.count} More on the Bottom , Max #computes: {main.max}{main.data.jobs?`, #jobs: ${Object.keys(main.data.jobs).length}`:''}</text>
+
+                        </g>)}
+                    </g>
+                </svg>
+                {_data[0]&&<svg width={(outerWidth)*_data[0].values.length +marginGroup.left+marginGroup.right} height={30} style={{position:'absolute',bottom:0,left:0}}>
+                    <g transform={`translate(${marginGroup.left},${marginGroup.top})`}>
+                        {_data[0]&&_data[0].values.map((d,ti)=><g key={ti} transform={`translate(${(outerWidth*ti)},0)`} >
                             <g transform={`translate(${margin.left},${margin.top})`}>
                                 <text y={4} dy=".65em" className={'year decade'}>{multiFormat(d.key)}</text>}
                             </g>
                         </g>)}
                     </g>
-                </svg>
+                </svg>}
                 {hover&&<Popover
                     sx={{
                         pointerEvents: 'none',
@@ -492,7 +619,7 @@ const AreaStack = function ({time_stamp, metricRangeMinMax,onLoad, color, config
                     <h1>Rendering...</h1>
                     <CircularProgress color="inherit"/>
                 </Backdrop>}
-            </div>}
+            </div>
         </div>
     </div>
 }
