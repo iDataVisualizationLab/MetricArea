@@ -532,7 +532,8 @@ const AreaStack = function ({time_stamp, metricRangeMinMax,onLoad, color, config
 
                             {data.map((main,i)=><motion.g key={main.key}
                                                           initial={{y: main.py??0,opacity:0}}
-                                                          animate={{ y: main.y,opacity:((!hover) || hover.highlights[main.key])?1:0.1 }}
+                                                          // animate={{ y: main.y,opacity:((!hover) || hover.highlights[main.key])?1:0.1 }}
+                                                          animate={{ y: main.y,opacity:1 }}
                                                           exit={{y: main.py??0,opacity:0}}
                                                           transition={{ type: "spring", stiffness: 30 }}>
                                 <g transform={`translate(0,${main.height-outerHeight})`}>
