@@ -260,9 +260,11 @@ const AreaStack = function ({time_stamp, metricRangeMinMax,onLoad, color, config
             if (focus&&focus.data.data.jobs){
                 if (focus.data.data.jobs){//&&(!focus.sub)) {
                     const jobsnum = Object.keys(focus.data.data.jobs).length;
-                    focus.data.sub = Object.keys(focus.data.data.jobs).slice(0,focus.expand?undefined:10).map(j => {
+                    const subs = Object.keys(focus.data.data.jobs).map(j => {
                         return singleTimeLine(timeIndex,focus.data.data.jobs[j], j, 'Job', 0.3, d3.max(timeIndex, t => t[1].length))
                     });
+                    subs.sort((a,b)=>b.max-a.max);
+                    focus.data.sub = subs.slice(0,focus.expand?undefined:10);
                     if (focus.data.sub.length<jobsnum){
                         const last = focus.data.sub[focus.data.sub.length-1];
                         last.extraSpace = 20;
