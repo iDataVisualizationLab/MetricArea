@@ -344,20 +344,20 @@ const AreaStack = function ({time_stamp, metricRangeMinMax,onLoad, color, config
                                 //     target.y = (-0.5);
                                 // else
                                 //     target.y = (-1.5);
-                                links.push({
-                                    source: main,
-                                    target,
-                                    color: comp[selectedSer] === null ? nullColor : steps(comp[selectedSer])
-                                });
+                                // links.push({
+                                //     source: main,
+                                //     target,
+                                //     color: comp[selectedSer] === null ? nullColor : steps(comp[selectedSer])
+                                // });
                             }
                         })
                     });
                     // data.sort((a,b)=>a.y-b.y);
-                    links = d3.groups(links, d => [d.source.key, d.target.key]).map(l => {
-                        l[1][0].value = l[1].length;
-                        l[1][0].target.x = main.x;
-                        return l[1][0]
-                    });
+                    // links = d3.groups(links, d => [d.source.key, d.target.key]).map(l => {
+                    //     l[1][0].value = l[1].length;
+                    //     l[1][0].target.x = main.x;
+                    //     return l[1][0]
+                    // });
                 }
             }else
                 highlights[main.key] = true;
