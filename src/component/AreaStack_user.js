@@ -338,18 +338,18 @@ const AreaStack = function ({time_stamp, metricRangeMinMax,onLoad, color, config
                         const {key, timestep} = comp;
                         scheme.computers[key].users[timestep].forEach(u => {
                             highlights[u] = true;
-                            if (u !== main.key) {
-                                const target = data.find(d => d.key === u);
-                                // if (target.order>Index)
-                                //     target.y = (-0.5);
-                                // else
-                                //     target.y = (-1.5);
-                                // links.push({
-                                //     source: main,
-                                //     target,
-                                //     color: comp[selectedSer] === null ? nullColor : steps(comp[selectedSer])
-                                // });
-                            }
+                            // if (u !== main.key) {
+                            //     const target = data.find(d => d.key === u);
+                            //     // if (target.order>Index)
+                            //     //     target.y = (-0.5);
+                            //     // else
+                            //     //     target.y = (-1.5);
+                            //     // links.push({
+                            //     //     source: main,
+                            //     //     target,
+                            //     //     color: comp[selectedSer] === null ? nullColor : steps(comp[selectedSer])
+                            //     // });
+                            // }
                         })
                     });
                     // data.sort((a,b)=>a.y-b.y);
@@ -363,6 +363,7 @@ const AreaStack = function ({time_stamp, metricRangeMinMax,onLoad, color, config
                 highlights[main.key] = true;
             const list = colorScale.stackColor.map(k=>[k,current[k]]).reverse().filter(d=>d[1]);
             const sharedu = Object.keys(highlights).length-1;
+            console.log(highlights)
             setHover({key,timeIndex,position,mouse:d3.pointer(event,document.body),value:current.max,data:current,parent:main,
                 highlights,
                 links,
@@ -379,7 +380,7 @@ const AreaStack = function ({time_stamp, metricRangeMinMax,onLoad, color, config
                             <Grid item xs={12}>{current.time.toLocaleString()}</Grid>
                             <Grid item xs={12}>#Computes:     {current.max}</Grid>
                             {main.data[current.timestep].jobs&&<Grid item xs={12}>#Jobs:         {main.data[current.timestep].jobs.length}</Grid>}
-                            {sharedu?<Grid item xs={12}>#Shared Users: {sharedu}</Grid>:''}
+                            {(sharedu>0)?<Grid item xs={12}>#Shared Users: {sharedu}</Grid>:''}
                         {list.map(d=><Grid key={d[0]} xs={12}><div className={'legendCell'} style={{marginLeft:10}}>
                             <div style={{width:20,height:10,backgroundColor:d[0]}}></div>
                             <span>{d[1]}</span>
